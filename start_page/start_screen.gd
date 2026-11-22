@@ -8,15 +8,16 @@ const H := 270.0
 const GAME_SCENE := "res://scenes/main.tscn"
 const START_META := "iamhell_game_started"
 const CYCLE := 4.8
+const AUTHOR_CREDIT := "由缕雨吹衣制作"
 
-const C_BLACK := Color(0.012, 0.008, 0.016)
-const C_DARK := Color(0.075, 0.035, 0.050)
-const C_MID := Color(0.29, 0.25, 0.28)
-const C_LIGHT := Color(0.76, 0.72, 0.67)
-const C_WHITE := Color(0.98, 0.94, 0.84)
-const C_RED_DARK := Color(0.28, 0.015, 0.040)
-const C_RED := Color(0.76, 0.045, 0.075)
-const C_EMBER := Color(1.0, 0.31, 0.14)
+const C_BLACK := Color(0.045, 0.030, 0.055)
+const C_DARK := Color(0.15, 0.085, 0.115)
+const C_MID := Color(0.48, 0.42, 0.46)
+const C_LIGHT := Color(0.84, 0.79, 0.72)
+const C_WHITE := Color(1.0, 0.97, 0.88)
+const C_RED_DARK := Color(0.38, 0.035, 0.065)
+const C_RED := Color(0.88, 0.075, 0.10)
+const C_EMBER := Color(1.0, 0.40, 0.18)
 
 const TITLE_SHADER := """
 shader_type canvas_item;
@@ -71,7 +72,7 @@ void fragment() {
 		texture(screen_tex, uv - vec2(split, 0.0)).b
 	);
 	vec2 q = (uv - vec2(0.5)) * vec2(1.55, 1.0);
-	c *= 1.0 - smoothstep(0.35, 0.80, length(q)) * (0.18 + hit * 0.20);
+	c *= 1.0 - smoothstep(0.35, 0.80, length(q)) * (0.10 + hit * 0.16);
 	c *= 0.96 + 0.04 * sin(FRAGCOORD.y * 3.14159);
 	c = mix(c, vec3(1.0), clamp(flash * 0.82, 0.0, 0.9));
 
@@ -83,37 +84,37 @@ void fragment() {
 	if (is_red) {
 		int k = int(clamp(floor(mx * 3.0 + th + 0.5), 0.0, 3.0));
 		result = choose_color(k,
-			vec3(0.012, 0.008, 0.016),
-			vec3(0.280, 0.015, 0.040),
-			vec3(0.760, 0.045, 0.075),
-			vec3(1.000, 0.310, 0.140));
+			vec3(0.045, 0.030, 0.055),
+			vec3(0.380, 0.035, 0.065),
+			vec3(0.880, 0.075, 0.100),
+			vec3(1.000, 0.400, 0.180));
 	} else {
 		float l = dot(c, vec3(0.299, 0.587, 0.114));
 		int k = int(clamp(floor(l * 3.0 + th + 0.5), 0.0, 3.0));
 		result = choose_color(k,
-			vec3(0.012, 0.008, 0.016),
-			vec3(0.075, 0.035, 0.050),
-			vec3(0.760, 0.720, 0.670),
-			vec3(0.980, 0.940, 0.840));
+			vec3(0.045, 0.030, 0.055),
+			vec3(0.150, 0.085, 0.115),
+			vec3(0.840, 0.790, 0.720),
+			vec3(1.000, 0.970, 0.880));
 	}
 
 	if (impact > 0.56) {
 		float l2 = dot(c, vec3(0.299, 0.587, 0.114));
 		if (is_red) {
-			result = vec3(0.760, 0.045, 0.075);
+			result = vec3(0.880, 0.075, 0.100);
 		} else if (l2 > 0.34) {
-			result = vec3(0.980, 0.940, 0.840);
+			result = vec3(1.000, 0.970, 0.880);
 		} else {
-			result = vec3(0.012, 0.008, 0.016);
+			result = vec3(0.045, 0.030, 0.055);
 		}
 	}
 
 	vec2 px = SCREEN_UV / SCREEN_PIXEL_SIZE;
 	float dist = length(px - iris_center);
 	if (dist > iris_r) {
-		result = vec3(0.012, 0.008, 0.016);
+		result = vec3(0.045, 0.030, 0.055);
 	} else if (dist > iris_r - 6.0 && th > -0.15) {
-		result = vec3(0.012, 0.008, 0.016);
+		result = vec3(0.045, 0.030, 0.055);
 	}
 
 	COLOR = vec4(result, 1.0);
@@ -127,14 +128,24 @@ var enter_t: float = 0.0
 var shader_rect: ColorRect
 var shader_mat: ShaderMaterial
 var start_sound: AudioStreamPlayer
+var author_font: SystemFont
 
 
 func _ready() -> void:
 	Engine.time_scale = 1.0
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_build_author_font()
 	_build_audio()
 	_build_overlay()
 	queue_redraw()
+
+
+func _build_author_font() -> void:
+	author_font = SystemFont.new()
+	author_font.font_names = PackedStringArray([
+		"Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "SimHei", "sans-serif"
+	])
+	author_font.allow_system_fallback = true
 
 
 func _build_audio() -> void:
@@ -266,6 +277,7 @@ func _draw_canvas() -> void:
 		draw_rect(Rect2(0, y, W, 1), Color(1, 1, 1, 0.025))
 	PF.draw(self, Vector2(16, 28), "I", 1, C_RED)
 	PF.draw(self, Vector2(W - 16, 28), "SHIFT//01", 1, C_MID, 2)
+	_draw_author_credit()
 	PF.draw(self, Vector2(16, 216), "NO ATTACK", 1, C_MID)
 	PF.draw(self, Vector2(W - 16, 216), "ONLY TIMING", 1, C_RED, 2)
 
@@ -279,6 +291,19 @@ func _draw_canvas() -> void:
 			Color(C_RED.r, C_RED.g, C_RED.b, 0.70), 5.0)
 		draw_line(Vector2(sx - 38, -10), Vector2(sx + 46, H + 10),
 			Color(1, 1, 1, 0.80), 1.0)
+
+
+func _draw_author_credit() -> void:
+	var text_width := 132.0
+	var panel := Rect2(W - 16.0 - text_width, 3.0, text_width, 15.0)
+	draw_rect(panel, Color(0, 0, 0, 0.68))
+	draw_rect(panel, Color(C_RED.r, C_RED.g, C_RED.b, 0.72), false, 1.0)
+	var pos := Vector2(panel.position.x, 14.0)
+	var color := Color(C_WHITE.r, C_WHITE.g, C_WHITE.b, 0.96)
+	draw_string_outline(author_font, pos, AUTHOR_CREDIT,
+		HORIZONTAL_ALIGNMENT_RIGHT, text_width - 6.0, 10, 2, Color(0, 0, 0, 0.96))
+	draw_string(author_font, pos, AUTHOR_CREDIT,
+		HORIZONTAL_ALIGNMENT_RIGHT, text_width - 6.0, 10, color)
 
 
 func _draw_title() -> void:

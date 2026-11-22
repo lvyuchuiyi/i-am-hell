@@ -10,6 +10,7 @@
 
 # Local-only
 /backup/
+/art/*.import
 
 # OS
 .DS_Store
