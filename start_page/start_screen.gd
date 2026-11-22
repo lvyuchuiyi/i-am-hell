@@ -98,7 +98,7 @@ void fragment() {
 			vec3(1.000, 0.970, 0.880));
 	}
 
-	if (impact > 0.56) {
+	if (impact > 0.78) {
 		float l2 = dot(c, vec3(0.299, 0.587, 0.114));
 		if (is_red) {
 			result = vec3(0.880, 0.075, 0.100);
@@ -209,7 +209,7 @@ func _update_shader() -> void:
 	shader_mat.set_shader_parameter("iris_r", iris)
 	shader_mat.set_shader_parameter("impact", hit)
 	shader_mat.set_shader_parameter("flash",
-		clampf(hit * 0.52 + (0.66 if entering and enter_t < 0.11 else 0.0), 0.0, 0.9))
+		clampf(hit * 0.18 + (0.30 if entering and enter_t < 0.09 else 0.0), 0.0, 0.42))
 	shader_mat.set_shader_parameter("pulse", 0.5 + 0.5 * sin(t * 5.0))
 
 
@@ -240,7 +240,7 @@ func _enter_game() -> void:
 
 
 func _draw() -> void:
-	var shake_amt := _impact() * 6.0 + (5.0 if entering and enter_t < 0.08 else 0.0)
+	var shake_amt := _impact() * 3.0 + (3.0 if entering and enter_t < 0.06 else 0.0)
 	var shake := Vector2(sin(t * 103.0) * shake_amt, cos(t * 79.0) * shake_amt * 0.45)
 	draw_set_transform(shake, 0.0, Vector2.ONE)
 	_draw_canvas()
@@ -275,22 +275,22 @@ func _draw_canvas() -> void:
 		draw_rect(Rect2(x, 0, 1, 224), Color(1, 1, 1, 0.025))
 	for y in range(18, 224, 24):
 		draw_rect(Rect2(0, y, W, 1), Color(1, 1, 1, 0.025))
-	PF.draw(self, Vector2(16, 28), "I", 1, C_RED)
-	PF.draw(self, Vector2(W - 16, 28), "SHIFT//01", 1, C_MID, 2)
-	_draw_author_credit()
-	PF.draw(self, Vector2(16, 216), "NO ATTACK", 1, C_MID)
-	PF.draw(self, Vector2(W - 16, 216), "ONLY TIMING", 1, C_RED, 2)
-
 	# Sweeping diagonal slash.
 	var sweep := _sweep()
 	if sweep > 0.0 and sweep < 1.0:
 		var sx := lerpf(-90.0, W + 90.0, sweep)
 		draw_line(Vector2(sx - 42, -10), Vector2(sx + 42, H + 10),
-			Color(1, 1, 1, 0.16), 20.0)
+			Color(1, 1, 1, 0.08), 8.0)
 		draw_line(Vector2(sx - 42, -10), Vector2(sx + 42, H + 10),
-			Color(C_RED.r, C_RED.g, C_RED.b, 0.70), 5.0)
+			Color(C_RED.r, C_RED.g, C_RED.b, 0.42), 3.0)
 		draw_line(Vector2(sx - 38, -10), Vector2(sx + 46, H + 10),
-			Color(1, 1, 1, 0.80), 1.0)
+			Color(1, 1, 1, 0.58), 1.0)
+
+	PF.draw(self, Vector2(16, 28), "I", 1, C_RED)
+	PF.draw(self, Vector2(W - 16, 28), "SHIFT//01", 1, C_MID, 2)
+	_draw_author_credit()
+	PF.draw(self, Vector2(16, 216), "NO ATTACK", 1, C_MID)
+	PF.draw(self, Vector2(W - 16, 216), "ONLY TIMING", 1, C_RED, 2)
 
 
 func _draw_author_credit() -> void:
@@ -336,8 +336,6 @@ func _draw_title() -> void:
 	draw_rect(Rect2(23 + offset.x, 148 + offset.y, 188, 2), C_BLACK)
 	PF.draw(self, Vector2(34 + offset.x, 152 + offset.y),
 		"SHIFT IS YOUR ONLY WEAPON", 1, C_BLACK)
-	PF.draw(self, Vector2(24 + offset.x, 178 + offset.y),
-		"THEY ATTACK. YOU SWAP. THEY DIE.", 1, C_RED)
 
 
 func _draw_big_word(pos: Vector2, text: String, scale: int) -> void:
