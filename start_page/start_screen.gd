@@ -287,23 +287,22 @@ func _draw_canvas() -> void:
 			Color(1, 1, 1, 0.58), 1.0)
 
 	PF.draw(self, Vector2(16, 28), "I", 1, C_RED)
-	PF.draw(self, Vector2(W - 16, 28), "SHIFT//01", 1, C_MID, 2)
 	_draw_author_credit()
 	PF.draw(self, Vector2(16, 216), "NO ATTACK", 1, C_MID)
 	PF.draw(self, Vector2(W - 16, 216), "ONLY TIMING", 1, C_RED, 2)
 
 
 func _draw_author_credit() -> void:
-	var text_width := 132.0
-	var panel := Rect2(W - 16.0 - text_width, 3.0, text_width, 15.0)
-	draw_rect(panel, Color(0, 0, 0, 0.68))
-	draw_rect(panel, Color(C_RED.r, C_RED.g, C_RED.b, 0.72), false, 1.0)
-	var pos := Vector2(panel.position.x, 14.0)
+	var text_width := 146.0
+	var panel := Rect2(W - 16.0 - text_width, 19.0, text_width, 19.0)
+	draw_rect(panel, Color(0, 0, 0, 0.82))
+	draw_rect(panel, Color(C_RED.r, C_RED.g, C_RED.b, 0.88), false, 1.0)
+	var pos := Vector2(panel.position.x, 34.0)
 	var color := Color(C_WHITE.r, C_WHITE.g, C_WHITE.b, 0.96)
 	draw_string_outline(author_font, pos, AUTHOR_CREDIT,
-		HORIZONTAL_ALIGNMENT_RIGHT, text_width - 6.0, 10, 2, Color(0, 0, 0, 0.96))
+		HORIZONTAL_ALIGNMENT_RIGHT, text_width - 8.0, 12, 2, Color(0, 0, 0, 1.0))
 	draw_string(author_font, pos, AUTHOR_CREDIT,
-		HORIZONTAL_ALIGNMENT_RIGHT, text_width - 6.0, 10, color)
+		HORIZONTAL_ALIGNMENT_RIGHT, text_width - 8.0, 12, color)
 
 
 func _draw_title() -> void:
