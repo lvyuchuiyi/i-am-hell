@@ -13,6 +13,9 @@ const BULLET_SPEED := 170.0
 var state: int = State.MOVE
 var timer: float = 0.0
 var aim_dir := Vector2.RIGHT
+var aggro_range: float = 0.0
+var requires_los: bool = false
+var require_on_screen: bool = false
 
 
 func _ready() -> void:
@@ -25,34 +28,43 @@ func _physics_process(delta: float) -> void:
 	if not alive or game == null or game.game_over:
 		return
 	var to_p: Vector2 = game.player.position - position
+	var can_engage := _can_engage(to_p)
 	apply_gravity(delta)
 	match state:
 		State.MOVE:
-			var dx := absf(to_p.x)
-			var move := 0.0
-			if dx > PREFERRED_DIST + 20.0:
-				move = signf(to_p.x)
-			elif dx < PREFERRED_DIST - 20.0:
-				move = -signf(to_p.x)
-			if is_on_floor() and not game.safe_step(self, move):
-				move = 0.0
-			velocity.x = move * SPEED
-			if absf(to_p.x) > 1.0:
-				facing = signf(to_p.x)
-			timer -= delta
-			if timer <= 0.0:
-				state = State.WINDUP
-				game.play_sfx("windup", 0.1)
-				timer = WINDUP_TIME
-				if to_p.length() > 0.01:
-					aim_dir = to_p.normalized()
+			if can_engage:
+				var dx := absf(to_p.x)
+				var move := 0.0
+				if dx > PREFERRED_DIST + 20.0:
+					move = signf(to_p.x)
+				elif dx < PREFERRED_DIST - 20.0:
+					move = -signf(to_p.x)
+				if is_on_floor() and not game.safe_step(self, move):
+					move = 0.0
+				velocity.x = move * SPEED
+				if absf(to_p.x) > 1.0:
+					facing = signf(to_p.x)
+				timer -= delta
+				if timer <= 0.0:
+					state = State.WINDUP
+					game.play_sfx("windup", 0.1)
+					timer = WINDUP_TIME
+					if to_p.length() > 0.01:
+						aim_dir = to_p.normalized()
+			else:
+				velocity.x = move_toward(velocity.x, 0.0, 500.0 * delta)
+				timer = maxf(timer, 0.2)
 		State.WINDUP:
 			velocity.x = 0.0
-			timer -= delta
-			if timer <= 0.0:
-				game.spawn_bullet(position + aim_dir * 9.0, aim_dir * BULLET_SPEED, self)
-				state = State.COOLDOWN
-				timer = COOLDOWN_TIME
+			if not can_engage:
+				state = State.MOVE
+				timer = 0.35
+			else:
+				timer -= delta
+				if timer <= 0.0:
+					game.spawn_bullet(position + aim_dir * 9.0, aim_dir * BULLET_SPEED, self)
+					state = State.COOLDOWN
+					timer = COOLDOWN_TIME
 		State.COOLDOWN:
 			velocity.x = 0.0
 			timer -= delta
@@ -60,6 +72,16 @@ func _physics_process(delta: float) -> void:
 				state = State.MOVE
 				timer = randf_range(0.3, 0.9)
 	move_and_slide()
+
+
+func _can_engage(to_p: Vector2) -> bool:
+	if aggro_range > 0.0 and to_p.length() > aggro_range:
+		return false
+	if requires_los and not game.has_line_of_sight(position, game.player.position):
+		return false
+	if require_on_screen and not game.is_world_on_screen(position, 10.0):
+		return false
+	return true
 
 
 func _draw_body() -> void:

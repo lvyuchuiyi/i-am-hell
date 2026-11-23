@@ -19,6 +19,18 @@ const MirrorScript := preload("res://scripts/enemy_mirror.gd")
 const SwapperScript := preload("res://scripts/enemy_swapper.gd")
 const HeavyScript := preload("res://scripts/enemy_heavy.gd")
 const MimicScript := preload("res://scripts/enemy_mimic.gd")
+const PlumbScript := preload("res://scripts/enemy_plumb.gd")
+const WeightedLiftPairScript := preload("res://scripts/weighted_lift_pair.gd")
+const BossLiftScript := preload("res://scripts/boss_lift.gd")
+const ThirdNailScript := preload("res://scripts/enemy_third_nail.gd")
+const ChainGripScript := preload("res://scripts/chain_grip.gd")
+const ChainWheelScript := preload("res://scripts/chain_wheel.gd")
+const ChainPendulumScript := preload("res://scripts/chain_pendulum.gd")
+const StoneWingScript := preload("res://scripts/enemy_stone_wing.gd")
+const HookPenitentScript := preload("res://scripts/enemy_hook_penitent.gd")
+const BoneNailScript := preload("res://scripts/bone_nail.gd")
+const LiftLatchScript := preload("res://scripts/lift_latch.gd")
+const BossBombScript := preload("res://scripts/boss_bomb.gd")
 const HudScript := preload("res://scripts/hud.gd")
 const TerrainScript := preload("res://scripts/terrain.gd")
 const BackgroundScript := preload("res://scripts/background.gd")
@@ -50,17 +62,24 @@ const KILL_STYLES := {
 	"a charger": "TRAMPLED",
 	"a bomb": "BOMBED",
 	"a heavy": "CRUSHED",
+	"a plumb": "PLUMBED",
 	"spikes": "SPIKED",
 	"the void": "INTO THE VOID",
 	"the sky": "SKYFALL",
+	"the third nail": "THIRD NAIL",
 	"a saw": "SLICED",
 	"a crusher": "FLATTENED",
 	"a laser": "FRIED",
+	"a stone impact": "WALL SHATTER",
+	"a giant hook": "HOOKED",
+	"a hook penitent": "HOOK DRAGGED",
+	"a chain impact": "ANCHOR IMPACT",
+	"a bone nail": "NAIL BLAST",
 	"a barrel": "KABOOM",
 	"the lava": "MELTED",
 }
 # 被“敌人的攻击”杀死时才回能量：鼓励让它们互相残杀，而不是全靠地形
-const REFUND_CAUSES := ["a bullet", "a charger", "a bomb", "a heavy"]
+const REFUND_CAUSES := ["a bullet", "a charger", "a bomb", "a heavy", "a plumb"]
 
 # ---- 镜头 / 子弹时间参数（调手感就改这里）
 const SLOWMO_SCALE := 0.35        # 危险时刻的时间流速
@@ -162,12 +181,15 @@ void fragment() {
 
 # ---- 跨关卡保存的进度（重载场景时不会丢）
 static var level_index: int = 0
-const DEBUG_LEVEL_SELECT := false  # 临时选关（按 Tab 打开）。发布前改成 false
+const DEBUG_LEVEL_SELECT := true   # 临时选关（按 Tab 打开）。发布前改成 false
 var select_open: bool = false
 var select_idx: int = 0
 static var total_deaths: int = 0
 static var total_score: int = 0
 static var run_time: float = 0.0
+static var run_perfects: int = 0
+static var run_best_combo: int = 0
+static var run_total_kills: int = 0
 
 # ---- 当前关卡
 var level_no: int = 1          # 给 HUD 读（从 1 开始）
@@ -199,6 +221,17 @@ var zone_set: Dictionary = {}  # 同上，查询用；站在反转区里的角�
 var door_rect := Rect2()
 var door_open: bool = false
 var level_time: float = 0.0
+var boss_mode: bool = false
+var boss_defeated: bool = false
+var boss_node = null
+var boss_lift = null
+var weighted_lift = null
+var chain_wheel = null
+var chain_pendulum = null
+var bone_nail = null
+var hook_nail := Vector2.ZERO
+var lift_min_row: int = 3
+var lift_max_row: int = 0
 
 var player = null
 var target = null
@@ -353,6 +386,17 @@ func _load_level(idx: int) -> void:
 	level_hint = data["hint"]
 	flip_level = data.get("flip", false)
 	always_open = data.get("door_open", false)
+	boss_mode = data.get("boss", "") == "third_nail"
+	boss_defeated = false
+	boss_node = null
+	boss_lift = null
+	weighted_lift = null
+	chain_wheel = null
+	chain_pendulum = null
+	bone_nail = null
+	hook_nail = Vector2.ZERO
+	lift_min_row = int(data.get("lift_min", 3))
+	lift_max_row = int(data.get("lift_max", 0))
 	lava_speed = data.get("lava", 0.0)
 	lava_wait = data.get("lava_delay", 2.5)
 	grid = data["map"]
@@ -361,6 +405,7 @@ func _load_level(idx: int) -> void:
 	# 这两个要等 rows 算出来以后再设（之前放在前面，rows 还是 0，所有东西一出生就算掉进深渊）
 	lava_y = rows * TILE + 8.0 if lava_speed > 0.0 else 1.0e9
 	void_y = rows * TILE + 28.0
+	hook_nail = _find_marker("N")
 
 	for r in rows:
 		var line: String = grid[r]
@@ -412,6 +457,7 @@ func _load_level(idx: int) -> void:
 			elif zl[c] == "v" and r < rows - 1 and (grid[r + 1] as String)[c] == "g":
 				zone_set[Vector2i(c, r)] = true
 	_build_decor()
+	_spawn_weighted_lift_pair()
 	# 炮塔要在墙矩形建好之后再放（画在墙上面）
 	for r in rows:
 		var line2: String = grid[r]
@@ -439,6 +485,15 @@ func _tile_center(c: int, r: int) -> Vector2:
 	return Vector2(c * TILE + TILE * 0.5, r * TILE + TILE * 0.5)
 
 
+func _find_marker(marker: String) -> Vector2:
+	for r in rows:
+		var line: String = grid[r]
+		var c := line.find(marker)
+		if c >= 0:
+			return _tile_center(c, r)
+	return Vector2.ZERO
+
+
 func _spawn_from_char(ch: String, c: int, r: int) -> void:
 	var pos := _tile_center(c, r)
 	match ch:
@@ -449,7 +504,13 @@ func _spawn_from_char(ch: String, c: int, r: int) -> void:
 		"C":
 			_spawn_entity(ChargerScript, pos)
 		"S":
-			_spawn_entity(ShooterScript, pos)
+			var shooter = ShooterScript.new()
+			shooter.position = pos
+			if boss_mode:
+				shooter.aggro_range = 160.0
+				shooter.requires_los = true
+				shooter.require_on_screen = true
+			_add_entity(shooter)
 		"B":
 			_spawn_entity(BomberScript, pos)
 		"X":
@@ -472,12 +533,69 @@ func _spawn_from_char(ch: String, c: int, r: int) -> void:
 			m.position = pos
 			m.facing = 1.0 if ch == "R" else -1.0
 			_add_entity(m)
+		"A":
+			chain_wheel = ChainWheelScript.new()
+			chain_wheel.game = self
+			chain_wheel.boss = boss_node
+			chain_wheel.bone_nail = bone_nail
+			chain_wheel.position = pos
+			_add_entity(chain_wheel)
+		"I":
+			bone_nail = BoneNailScript.new()
+			bone_nail.game = self
+			bone_nail.boss = boss_node
+			bone_nail.position = pos
+			_add_entity(bone_nail)
+		"J":
+			var grip = ChainGripScript.new()
+			grip.position = pos
+			_add_entity(grip)
+		"Y":
+			chain_pendulum = ChainPendulumScript.new()
+			chain_pendulum.game = self
+			chain_pendulum.pivot = pos
+			chain_pendulum.chain_length = 136.0
+			chain_pendulum.position = pos + Vector2(0, chain_pendulum.chain_length)
+			chain_pendulum.nail_position = hook_nail
+			_add_entity(chain_pendulum)
+		"N":
+			pass
+		"V":
+			_spawn_entity(StoneWingScript, pos)
+		"U":
+			_spawn_entity(HookPenitentScript, pos)
+		"F":
+			var latch = LiftLatchScript.new()
+			latch.game = self
+			latch.position = pos
+			fx_root.add_child(latch)
+		"Z":
+			boss_node = ThirdNailScript.new()
+			boss_node.game = self
+			boss_node.position = pos
+			level_root.add_child(boss_node)
+		"3":
+			boss_lift = BossLiftScript.new()
+			boss_lift.game = self
+			boss_lift.position = pos
+			boss_lift.stops = [
+				pos.y,
+				35.0 * TILE + 3.0,
+				31.0 * TILE + 3.0,
+				28.0 * TILE + 3.0,
+				23.0 * TILE + 3.0,
+				19.0 * TILE + 3.0,
+				15.0 * TILE + 3.0,
+			]
+			fx_root.add_child(boss_lift)
 		"W":
 			_spawn_entity(SwapperScript, pos)
 		"H":
 			_spawn_entity(HeavyScript, pos)
 		"M":
 			_spawn_entity(MimicScript, pos)
+		"b":
+			_spawn_entity(PlumbScript, pos)
 		"K":
 			var k = CrusherScript.new()
 			k.game = self
@@ -501,6 +619,31 @@ func _spawn_laser(c: int, r: int) -> void:
 	l.end_x = x
 	l.timer = 1.0 + float((r * 7) % 5) * 0.4   # 错开节奏
 	fx_root.add_child(l)
+
+
+func _spawn_weighted_lift_pair() -> void:
+	var left_pos := Vector2.ZERO
+	var right_pos := Vector2.ZERO
+	for r in rows:
+		var line: String = grid[r]
+		for c in cols:
+			if line[c] == "1":
+				left_pos = _tile_center(c, r)
+			elif line[c] == "2":
+				right_pos = _tile_center(c, r)
+	if left_pos == Vector2.ZERO or right_pos == Vector2.ZERO:
+		return
+	var pair = WeightedLiftPairScript.new()
+	pair.game = self
+	pair.left_position = left_pos
+	pair.right_position = right_pos
+	pair.min_y = lift_min_row * TILE + 8.0
+	if lift_max_row > 0:
+		pair.max_y = lift_max_row * TILE + 8.0
+	else:
+		pair.max_y = left_pos.y
+	fx_root.add_child(pair)
+	weighted_lift = pair
 
 
 func _spawn_entity(scr: Script, pos: Vector2) -> void:
@@ -546,6 +689,22 @@ func is_solid_tile(c: int, r: int) -> bool:
 
 func solid_at(p: Vector2) -> bool:
 	return _is_solid_char(tile_at(p))
+
+
+func has_line_of_sight(a: Vector2, b: Vector2) -> bool:
+	var steps := int(a.distance_to(b) / 4.0)
+	for i in range(1, steps):
+		if solid_at(a.lerp(b, float(i) / float(steps))):
+			return false
+	return true
+
+
+func is_world_on_screen(p: Vector2, margin: float = 16.0) -> bool:
+	var screen := world_to_screen(p)
+	return (
+		screen.x >= -margin and screen.x <= 480.0 + margin
+		and screen.y >= -margin and screen.y <= 270.0 + margin
+	)
 
 
 func is_ground(p: Vector2) -> bool:
@@ -699,6 +858,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				total_deaths = 0
 				total_score = 0
 				run_time = 0.0
+				run_perfects = 0
+				run_best_combo = 0
+				run_total_kills = 0
 				_restart()
 			return
 		if key == KEY_R:
@@ -1063,6 +1225,8 @@ func hit_entity(e, cause: String) -> bool:
 	add_shake(4.0)
 	punch = maxf(punch, 0.05)
 	hitstop(0.06)
+	if e.has_method("on_killed"):
+		e.on_killed(cause)
 	e.queue_free()
 	return true
 
@@ -1099,10 +1263,17 @@ func damage_circle(center: Vector2, r: float, cause: String) -> void:
 			hit_entity(e, cause)
 
 
-func damage_rect(rect: Rect2, cause: String) -> void:
+func damage_rect(rect: Rect2, cause: String, ignore = null) -> int:
+	var killed := 0
 	for e in get_entities():
+		if e == ignore:
+			continue
 		if rect.intersects(e.get_hit_rect()):
+			var was_alive: bool = e.alive
 			hit_entity(e, cause)
+			if was_alive and not e.alive:
+				killed += 1
+	return killed
 
 
 ## 重装：碰到的一切都被压死
@@ -1216,6 +1387,14 @@ func spawn_blast(pos: Vector2, r: float, fuse: float, cause: String = "a bomb") 
 	fx_root.add_child(bl)
 
 
+func spawn_boss_bomb(pos: Vector2):
+	var bomb = BossBombScript.new()
+	bomb.game = self
+	bomb.position = pos
+	_add_entity(bomb)
+	return bomb
+
+
 func _player_die(cause: String) -> void:
 	play_sfx("death", 0.0)
 	game_over = true
@@ -1238,7 +1417,10 @@ func _player_die(cause: String) -> void:
 
 func _check_door() -> void:
 	var was_open := door_open
-	door_open = always_open or count_enemies() == 0
+	if boss_mode:
+		door_open = always_open or boss_defeated
+	else:
+		door_open = always_open or count_enemies() == 0
 	if door_open and not was_open:
 		# 门打开的瞬间给个提示
 		rings.append({"p": door_rect.get_center(), "t": 0.3, "max": 24.0})
@@ -1254,6 +1436,9 @@ func _level_clear() -> void:
 	cleared = true
 	clear_t = 0.0
 	total_score += score
+	run_perfects += perfects
+	run_best_combo = maxi(run_best_combo, best_combo)
+	run_total_kills += kills
 	# 评级：杀法越多样越高；S 还要求至少一次完美换位
 	var distinct := methods_used.size()
 	if distinct >= mini(3, kills) and perfects >= 1:
@@ -1274,6 +1459,18 @@ func get_run_time() -> float:
 
 func get_total_score() -> int:
 	return total_score
+
+
+func get_run_perfects() -> int:
+	return run_perfects
+
+
+func get_run_best_combo() -> int:
+	return run_best_combo
+
+
+func get_run_total_kills() -> int:
+	return run_total_kills
 
 
 func _go_to_level(idx: int) -> void:
@@ -1310,24 +1507,26 @@ func _update_camera(rdt: float) -> void:
 	focus_w *= exp(-5.0 * rdt)
 
 	var zoom_amt := 1.0 + punch + danger_amt * DANGER_ZOOM
-	var lean := focus_w
-	var look := focus
-	if danger_amt > 0.0 and player != null:
-		# 危险时镜头往主角身上靠
-		look = focus.lerp(player.position, danger_amt)
-		lean = maxf(lean, danger_amt * 0.6)
-	if game_over and not cleared:
-		death_t = minf(death_t + rdt, 1.0)
-		zoom_amt = lerpf(zoom_amt, DEATH_ZOOM, ease(death_t, 0.4))
-		look = focus
-		lean = 0.9
-
-	camera.zoom = Vector2(zoom_amt, zoom_amt)
 	var base := SCREEN_CENTER
 	if rows > 17 and player != null:
 		cam_y = lerpf(cam_y, _cam_target_y(), 1.0 - exp(-6.0 * rdt))
 		base = Vector2(SCREEN_CENTER.x, cam_y)
-	camera.position = base.lerp(look, lean)
+
+	# Start from the current follow position. Swaps may pull toward their
+	# midpoint, then danger may pull further toward the player without ever
+	# mixing a screen-space default into a world-space camera coordinate.
+	var look := base
+	if focus_w > 0.0:
+		look = base.lerp(focus, focus_w)
+	if danger_amt > 0.0 and player != null:
+		look = look.lerp(player.position, danger_amt * 0.6)
+	if game_over and not cleared:
+		death_t = minf(death_t + rdt, 1.0)
+		zoom_amt = lerpf(zoom_amt, DEATH_ZOOM, ease(death_t, 0.4))
+		look = base.lerp(focus, 0.9)
+
+	camera.zoom = Vector2(zoom_amt, zoom_amt)
+	camera.position = look
 	camera.rotation = roll
 	camera.offset = Vector2(rng.randf_range(-shake, shake), rng.randf_range(-shake, shake)) + kick
 

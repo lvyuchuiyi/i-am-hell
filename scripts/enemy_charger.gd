@@ -2,7 +2,7 @@ extends Entity
 ## 冲锋者：在同一高度靠近主角后原地抖动蓄力，然后锁定方向水平冲刺。
 ## 冲刺撞到谁就撞死谁（主角或其他敌人），撞墙或箱子会停下。
 
-enum State { CHASE, WINDUP, DASH, RECOVER }
+enum State { CHASE, WINDUP, DASH, RECOVER, PINNED }
 
 const WALK_SPEED := 40.0
 const DASH_SPEED := 280.0
@@ -15,6 +15,8 @@ const RECOVER_TIME := 0.7
 var state: int = State.CHASE
 var timer: float = 0.0
 var jitter := Vector2.ZERO
+var pinned_to = null
+var pinned_offset := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -25,6 +27,12 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if not alive or game == null or game.game_over:
+		return
+	if state == State.PINNED:
+		velocity = Vector2.ZERO
+		if pinned_to != null and is_instance_valid(pinned_to):
+			position = pinned_to.position + pinned_offset
+		queue_redraw()
 		return
 	var to_p: Vector2 = game.player.position - position
 	apply_gravity(delta)
@@ -66,6 +74,18 @@ func _physics_process(delta: float) -> void:
 				game.add_shake(2.0)
 			state = State.RECOVER
 			timer = RECOVER_TIME
+
+
+func pin_to_wheel(anchor, offset: Vector2) -> void:
+	state = State.PINNED
+	pinned_to = anchor
+	pinned_offset = offset
+	velocity = Vector2.ZERO
+	position = anchor.position + offset
+
+
+func can_trigger_wheel() -> bool:
+	return state == State.DASH or state == State.RECOVER
 
 
 ## 主角在 p 位置时，这只冲锋者是否马上要撞到他（用于触发子弹时间）
@@ -137,3 +157,8 @@ func _draw_body() -> void:
 			var a := anim_t * 8.0 + i * TAU / 3.0
 			var sp := Vector2(jx + cos(a) * 5.0, top - 4.0 + sin(a) * 1.5)
 			draw_rect(Rect2(sp - Vector2(1, 1), Vector2(2, 2)), white)
+	elif state == State.PINNED:
+		draw_rect(body.grow(2.0), Color(0.66, 0.08, 0.1), false, 1.0)
+		draw_line(Vector2(0, top - 1.0), Vector2(0, top - 9.0), Color(1, 1, 1, 0.7), 1.0)
+		draw_rect(Rect2(-2, top - 11.0, 4, 3), Color(0.66, 0.08, 0.1))
+		draw_rect(Rect2(ex - 1.0, top + 2.0, 2, 2), Color(1.0, 0.32, 0.22))

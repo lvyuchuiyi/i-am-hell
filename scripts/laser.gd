@@ -28,12 +28,14 @@ func _physics_process(delta: float) -> void:
 		State.OFF:
 			if timer <= 0.0:
 				state = State.CHARGE
-				game.play_sfx("laser_charge", 0.03)
+				if game.is_world_on_screen(position, 24.0):
+					game.play_sfx("laser_charge", 0.03)
 				timer = CHARGE_TIME
 		State.CHARGE:
 			if timer <= 0.0:
 				state = State.FIRE
-				game.play_sfx("laser_fire", 0.03)
+				if game.is_world_on_screen(position, 24.0):
+					game.play_sfx("laser_fire", 0.03)
 				timer = FIRE_TIME
 				game.add_shake(2.0)
 		State.FIRE:
