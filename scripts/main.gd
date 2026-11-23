@@ -503,6 +503,11 @@ func _spawn_from_char(ch: String, c: int, r: int) -> void:
 			_add_entity(player)
 		"C":
 			_spawn_entity(ChargerScript, pos)
+		"c":
+			var execution_charger = ChargerScript.new()
+			execution_charger.execution_variant = true
+			execution_charger.position = pos
+			_add_entity(execution_charger)
 		"S":
 			var shooter = ShooterScript.new()
 			shooter.position = pos

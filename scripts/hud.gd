@@ -140,6 +140,18 @@ func _draw() -> void:
 	if game.combo > 1:
 		PF.draw(self, Vector2(W / 2.0, 36 if boss_active else 18), "%d COMBO" % game.combo, 1, C_WHITE, 1, C_RED)
 
+	if (
+		game.level_index == 18
+		and game.boss_node != null
+		and is_instance_valid(game.boss_node)
+		and game.boss_node.has_method("needs_wheel_hint")
+		and game.boss_node.needs_wheel_hint()
+		and game.player != null
+		and game.player.position.y > 62.0 * 16.0
+		and game.player.position.y < 76.0 * 16.0
+	):
+		_draw_wheel_hint()
+
 	# ---------------- 底部提示栏：只在每关开头显示 5 秒，然后淡出（之后不挡地面和坑）
 	if not game.game_over and intro_t < 5.0:
 		var ha := clampf((5.0 - intro_t) * 2.0, 0.0, 1.0)
@@ -407,6 +419,15 @@ func _draw_boss_health(boss) -> void:
 		if i < boss.health:
 			draw_rect(Rect2(r.position + Vector2(1, 1), Vector2(17, 4)), C_WHITE if flash else C_RED)
 			draw_rect(Rect2(r.position + Vector2(2, 2), Vector2(15, 1)), C_EMBER)
+
+
+func _draw_wheel_hint() -> void:
+	var panel := Rect2(54, 205, 372, 36)
+	draw_rect(panel, Color(0, 0, 0, 0.9))
+	draw_rect(panel, C_WHITE, false, 1.0)
+	draw_rect(Rect2(panel.position + Vector2(2, 2), Vector2(3, panel.size.y - 4)), C_RED)
+	PF.draw(self, Vector2(W / 2.0, 211), "ARMORED CHARGER: NO SHIFT", 1, C_EMBER, 1, C_BLACK)
+	PF.draw(self, Vector2(W / 2.0, 225), "LURE IT INTO THE WHEEL TO PULL THE BONE NAIL", 1, C_WHITE, 1, C_BLACK)
 
 
 ## 临时选关面板（main.gd 的 DEBUG_LEVEL_SELECT 关掉后就不会出现）

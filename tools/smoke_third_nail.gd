@@ -54,6 +54,15 @@ func _run() -> void:
 		failures.append("new monster counts are wrong")
 	if _count_char(game.grid, "F") != 5:
 		failures.append("expected five central-lift release latches")
+	if _count_char(game.grid, "J") != 0:
+		failures.append("wheel-room safety grip is still present")
+	if _count_char(game.grid, "c") != 1:
+		failures.append("expected one execution-wheel charger marker")
+	var execution_charger = _find_execution_charger(game)
+	if execution_charger == null:
+		failures.append("execution-wheel charger is missing")
+	elif execution_charger.swappable:
+		failures.append("execution-wheel charger can still be shifted")
 	if _count_char(game.grid, "L") != 2:
 		failures.append("expected two final-area lasers")
 	var laser = _find_fx_script_at(game, "laser.gd", Vector2(1 * 16 + 8, 26 * 16 + 8))
@@ -83,7 +92,7 @@ func _run() -> void:
 		failures.append("safe spawn triggered slow motion for %d frames" % spawn_danger)
 
 	# LEFT NAIL: spin the execution wheel.
-	var anchor_charger = _find_script(game, "enemy_charger.gd")
+	var anchor_charger = _find_execution_charger(game)
 	if anchor_charger != null:
 		anchor_charger.position = game.chain_wheel.position + Vector2(-18, 0)
 		anchor_charger.velocity = Vector2.ZERO
@@ -224,6 +233,17 @@ func _count_char(grid: Array, ch: String) -> int:
 func _find_script(game, file_name: String):
 	for e in game.get_entities():
 		if e.get_script() != null and e.get_script().resource_path.get_file() == file_name:
+			return e
+	return null
+
+
+func _find_execution_charger(game):
+	for e in game.get_entities():
+		if (
+			e.get_script() != null
+			and e.get_script().resource_path.get_file() == "enemy_charger.gd"
+			and e.execution_variant
+		):
 			return e
 	return null
 

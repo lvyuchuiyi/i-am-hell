@@ -17,11 +17,14 @@ var timer: float = 0.0
 var jitter := Vector2.ZERO
 var pinned_to = null
 var pinned_offset := Vector2.ZERO
+var execution_variant: bool = false
 
 
 func _ready() -> void:
-	setup_body(Vector2(12, 10), 2, 1)
+	setup_body(Vector2(15, 12) if execution_variant else Vector2(12, 10), 2, 1)
 	add_to_group("enemy")
+	if execution_variant:
+		swappable = false
 	timer = randf_range(0.5, 1.2)
 
 
@@ -101,6 +104,7 @@ func _draw_body() -> void:
 	var f := facing
 	var white := Color.WHITE
 	var black := Color.BLACK
+	var body_color := Color(0.66, 0.08, 0.1) if execution_variant else white
 	var jx := 0.0
 	var crouch := 0.0
 	if state == State.WINDUP:
@@ -131,7 +135,7 @@ func _draw_body() -> void:
 	if state == State.RECOVER:
 		draw_rect(body, white, false, 1.0)
 	else:
-		draw_rect(body, white)
+		draw_rect(body, body_color)
 
 	# 两只角
 	var hx := jx + f * 4.0
@@ -162,3 +166,14 @@ func _draw_body() -> void:
 		draw_line(Vector2(0, top - 1.0), Vector2(0, top - 9.0), Color(1, 1, 1, 0.7), 1.0)
 		draw_rect(Rect2(-2, top - 11.0, 4, 3), Color(0.66, 0.08, 0.1))
 		draw_rect(Rect2(ex - 1.0, top + 2.0, 2, 2), Color(1.0, 0.32, 0.22))
+
+	if execution_variant:
+		# Armored execution runner: heavier shoulders, a locked collar, and a
+		# visible no-swap seal so the player reads it as machinery, not a target.
+		draw_rect(Rect2(jx - 9.0, top + 0.5, 18.0, 2.0), white)
+		draw_rect(Rect2(jx - 7.0, top - 1.0, 3.0, 2.0), white)
+		draw_rect(Rect2(jx + 4.0, top - 1.0, 3.0, 2.0), white)
+		draw_rect(Rect2(jx - 2.0, top - 8.0, 4.0, 4.0), black)
+		draw_rect(Rect2(jx - 1.0, top - 7.0, 2.0, 2.0), Color(0.66, 0.08, 0.1))
+		draw_line(Vector2(jx - 3.0, top - 10.0), Vector2(jx + 3.0, top - 4.0), white, 1.0)
+		draw_line(Vector2(jx + 3.0, top - 10.0), Vector2(jx - 3.0, top - 4.0), white, 1.0)

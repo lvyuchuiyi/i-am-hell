@@ -265,6 +265,10 @@ func is_waiting_for_bomb() -> bool:
 	return state == State.BOMB_WINDOW
 
 
+func needs_wheel_hint() -> bool:
+	return state == State.LEFT_LOCKED
+
+
 func _begin_slam(bomb = null) -> void:
 	if state != State.BOMB_WINDOW:
 		return
