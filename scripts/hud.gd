@@ -396,7 +396,7 @@ func _draw_ending_footer(t: float) -> void:
 	PF.draw(self, Vector2(W / 2.0, 230), "GAME OFF 2026 ENTRY", 1, C_MID, 1)
 	var blink := 0.62 + 0.38 * sin(t * 5.4)
 	PF.draw(self, Vector2(W / 2.0, 242), "PRESS R TO DESCEND AGAIN", 1, Color(C_WHITE.r, C_WHITE.g, C_WHITE.b, blink), 1, Color(C_RED.r, C_RED.g, C_RED.b, blink))
-	PF.draw(self, Vector2(14, 258), "SOUND: SUBSPACEAUDIO / JUHANI JUNKALA - CC0", 1, C_DARK, 0)
+	PF.draw(self, Vector2(14, 258), "MUSIC: CENTURION_OF_WAR / G_P / FUPI - CC0", 1, C_DARK, 0)
 	if author_font != null:
 		var credit_panel := Rect2(W - 158.0, 247.0, 144.0, 19.0)
 		draw_rect(credit_panel, C_BLACK)

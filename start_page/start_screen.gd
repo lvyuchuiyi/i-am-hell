@@ -128,11 +128,15 @@ var enter_t: float = 0.0
 var shader_rect: ColorRect
 var shader_mat: ShaderMaterial
 var start_sound: AudioStreamPlayer
+var music = null
 var author_font: SystemFont
 
 
 func _ready() -> void:
 	Engine.time_scale = 1.0
+	music = get_node_or_null("/root/Music")
+	if music != null:
+		music.play_menu()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build_author_font()
 	_build_audio()

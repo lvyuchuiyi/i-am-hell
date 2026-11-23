@@ -121,8 +121,16 @@ playtesting, and final creative decisions were created and directed by the devel
 - 改音量：`scripts/sfx.gd` 的 `VOLUME`。
 - 规律：所有敌人攻击前都会响同一个上扬的“警告音”，听到就该准备换位了。
 
+## 音乐
+- `assets/music/menu_quest_of_doom.ogg`：主界面和通关画面，*Quest of Doom* by Centurion_of_war。
+- `assets/music/stage_electro_swing.mp3`、`stage_wacky_workings.ogg`：普通关与挑战关交替使用，分别由 G_P、Fupi 创作。
+- `assets/music/boss_inferior_deity.ogg`：最终 Boss，*Inferior Deity* by Centurion_of_war。
+- 四首音乐均为 **CC0 1.0**，对应原始页面与授权说明见 `assets/music/LICENSES.md`。
+- 音乐由 `scripts/music.gd` 自动加载：跨场景交叉淡化、手动无缝循环、独立 Music Bus；时缓时只对音乐做低通和轻微降调，不改现有音效。
+
 ## 致谢
 - Sound effects: SubspaceAudio (Juhani Junkala) — "The Essential Retro Video Game Sound Effects Collection [512 sounds]", CC0. https://opengameart.org/content/512-sound-effects-8-bit-style
+- Music: Centurion_of_war, G_P, Fupi — CC0. See `assets/music/LICENSES.md`.
 
 ## 引擎
 Godot 4.7（Compatibility 渲染器，可导出网页版）。

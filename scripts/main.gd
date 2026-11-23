@@ -241,6 +241,7 @@ var hud = null
 var invert_rect: ColorRect      # 全屏调色板（顺便负责反色闪光）
 var terrain = null
 var sfx = null
+var music = null
 var level_root: Node2D
 var entities_root: Node2D
 var fx_root: Node2D
@@ -310,6 +311,7 @@ func _ready() -> void:
 
 	rng.randomize()
 	Engine.time_scale = 1.0
+	music = get_node_or_null("/root/Music")
 
 	level_root = Node2D.new()
 	add_child(level_root)
@@ -388,6 +390,8 @@ func _load_level(idx: int) -> void:
 	flip_level = data.get("flip", false)
 	always_open = data.get("door_open", false)
 	boss_mode = data.get("boss", "") == "third_nail"
+	if music != null:
+		music.play_stage(level_index, boss_mode)
 	boss_defeated = false
 	boss_node = null
 	boss_lift = null
@@ -764,6 +768,8 @@ func _process(_delta: float) -> void:
 
 	var want_danger := danger and not game_over
 	danger_amt = move_toward(danger_amt, 1.0 if want_danger else 0.0, rdt * 7.0)
+	if music != null:
+		music.set_danger(danger_amt)
 
 	# 时间流速：顿帧 > 死亡慢放 > 子弹时间 > 正常
 	var stopping := hitstop_until > 0 and Time.get_ticks_msec() < hitstop_until
@@ -1474,6 +1480,8 @@ func _level_clear() -> void:
 	invert_t = 0.05
 	if level_index + 1 >= level_count:
 		all_clear = true
+		if music != null:
+			music.play_ending()
 
 
 func get_run_time() -> float:
