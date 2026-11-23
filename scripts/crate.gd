@@ -2,6 +2,8 @@ extends Entity
 ## 箱子：受重力，能站在上面，挡子弹、挡冲锋，杀不死，可以换位（当作瞬移点）。
 ## 箱子在碰撞层 1（和地形一样），所以主角和敌人都会被它挡住。
 
+var progress_locked: bool = false
+
 
 func _ready() -> void:
 	setup_body(Vector2(14, 14), 1, 1)
@@ -21,3 +23,7 @@ func _draw_body() -> void:
 	draw_rect(Rect2(-7, -7, 14, 14), Color.WHITE, false, 1.0)
 	draw_line(Vector2(-7, -7), Vector2(7, 7), Color.WHITE, 1.0)
 	draw_line(Vector2(7, -7), Vector2(-7, 7), Color.WHITE, 1.0)
+	if progress_locked:
+		draw_rect(Rect2(-5, -12, 10, 5), Color.BLACK)
+		draw_rect(Rect2(-4, -11, 8, 3), Color(0.66, 0.08, 0.1))
+		draw_arc(Vector2(0, -11), 3.0, PI, TAU, 8, Color.WHITE, 1.0)

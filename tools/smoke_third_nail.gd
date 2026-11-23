@@ -63,6 +63,11 @@ func _run() -> void:
 		failures.append("execution-wheel charger is missing")
 	elif execution_charger.swappable:
 		failures.append("execution-wheel charger can still be shifted")
+	var exit_crate = _find_script(game, "crate.gd")
+	if exit_crate == null:
+		failures.append("boss exit crate missing")
+	elif exit_crate.swappable or not exit_crate.progress_locked:
+		failures.append("boss exit crate is swappable before the boss dies")
 	if _count_char(game.grid, "L") != 2:
 		failures.append("expected two final-area lasers")
 	var laser = _find_fx_script_at(game, "laser.gd", Vector2(1 * 16 + 8, 26 * 16 + 8))
@@ -219,6 +224,9 @@ func _run() -> void:
 	game._check_door()
 	if not game.door_open:
 		failures.append("exit stayed closed after the boss died")
+	if exit_crate != null and is_instance_valid(exit_crate):
+		if not exit_crate.swappable or exit_crate.progress_locked:
+			failures.append("boss exit crate stayed locked after the boss died")
 
 	_finish()
 

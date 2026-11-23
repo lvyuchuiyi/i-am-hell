@@ -225,6 +225,7 @@ var boss_mode: bool = false
 var boss_defeated: bool = false
 var boss_node = null
 var boss_lift = null
+var progress_crates: Array = []
 var weighted_lift = null
 var chain_wheel = null
 var chain_pendulum = null
@@ -390,6 +391,7 @@ func _load_level(idx: int) -> void:
 	boss_defeated = false
 	boss_node = null
 	boss_lift = null
+	progress_crates.clear()
 	weighted_lift = null
 	chain_wheel = null
 	chain_pendulum = null
@@ -519,7 +521,13 @@ func _spawn_from_char(ch: String, c: int, r: int) -> void:
 		"B":
 			_spawn_entity(BomberScript, pos)
 		"X":
-			_spawn_entity(CrateScript, pos)
+			var crate = CrateScript.new()
+			crate.position = pos
+			if boss_mode:
+				crate.progress_locked = true
+				crate.swappable = false
+				progress_crates.append(crate)
+			_add_entity(crate)
 		"E":
 			_spawn_entity(BarrelScript, pos)
 		"O", "Q":
@@ -1424,6 +1432,8 @@ func _check_door() -> void:
 	var was_open := door_open
 	if boss_mode:
 		door_open = always_open or boss_defeated
+		if boss_defeated:
+			_unlock_progress_crates()
 	else:
 		door_open = always_open or count_enemies() == 0
 	if door_open and not was_open:
@@ -1433,6 +1443,14 @@ func _check_door() -> void:
 		add_shake(2.0)
 	if door_open and player != null and player.alive and player.get_hit_rect().intersects(door_rect):
 		_level_clear()
+
+
+func _unlock_progress_crates() -> void:
+	for crate in progress_crates:
+		if crate != null and is_instance_valid(crate):
+			crate.progress_locked = false
+			crate.swappable = true
+			crate.queue_redraw()
 
 
 func _level_clear() -> void:
